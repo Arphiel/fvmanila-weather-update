@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FV Manila Weather Status</title>
+    <title>Ermita Meteorological & Geological Briefing</title>
     <!-- Loading Google Font 'Plus Jakarta Sans' for premium corporate feel -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -665,6 +665,8 @@ Your goal is to search the web using Google Search and retrieve the absolute lat
 You must respond in strict JSON format matching the following schema:
 {
   "taal_alert_level": number,
+  "taal_event_type": "string (briefly state recent activity e.g., Minor phreatomagmatic vents or Steam-driven bursts)",
+  "taal_seismic_state": "string (briefly state seismic metrics e.g., 2 volcanic earthquakes or Low volcanic tremors)",
   "weather_system": "string (e.g. Southwest Monsoon / Habagat, Localized Thunderstorms, or Extreme Heat Index)",
   "weather_description": "string (brief summary of actual current conditions in Manila)",
   "taal_status": "string (brief summary of actual current activity and DOST-PHIVOLCS warnings)"
@@ -728,6 +730,8 @@ Do not include any Markdown wrappers like \`\`\`json. Only return the raw JSON s
                     air_temperature: liveTemp,
                     humidity: liveHumid,
                     taal_alert_level: responseData?.taal_alert_level !== undefined ? responseData.taal_alert_level : 1,
+                    taal_event_type: responseData?.taal_event_type || "Low-level degassing bursts",
+                    taal_seismic_state: responseData?.taal_seismic_state || "Background level seismicity",
                     weather_system: responseData?.weather_system || (liveRainProb >= 50 ? "Southwest Monsoon (Habagat)" : "Warm & Dry Ridge"),
                     weather_description: responseData?.weather_description || `Metro Manila is currently experiencing a real-time relative humidity of ${liveHumid}% and active solar loading of ${liveTemp}°C.`,
                     taal_status: responseData?.taal_status || "Taal Volcano is systematically monitored at Alert Level 1. Baseline parameters show standard low-level seismic variations."
@@ -845,6 +849,12 @@ Do not include any Markdown wrappers like \`\`\`json. Only return the raw JSON s
                 badge.className = "px-3 py-1 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20 text-xs font-bold uppercase tracking-wider";
             }
 
+            if (data.taal_event_type) {
+                document.getElementById('taal-event-type').innerText = data.taal_event_type;
+            }
+            if (data.taal_seismic_state) {
+                document.getElementById('taal-seismic-state').innerText = data.taal_seismic_state;
+            }
             if (data.taal_status) {
                 document.getElementById('taal-desc').innerText = data.taal_status;
             }
@@ -912,6 +922,8 @@ Do not include any Markdown wrappers like \`\`\`json. Only return the raw JSON s
                 air_temperature: 32.2,
                 humidity: 65,
                 taal_alert_level: 1,
+                taal_event_type: "Low-level degassing bursts",
+                taal_seismic_state: "Background volcanic earthquake levels",
                 weather_system: "Southwest Monsoon (Habagat)",
                 weather_description: "The Southwest Monsoon (Habagat) brings clouds and localized thunderstorm conditions over Metro Manila today.",
                 taal_status: "Taal Volcano is systematically monitored at Alert Level 1. Standard low-level unrest protocols are active, with no immediate hazards to Ermita."
