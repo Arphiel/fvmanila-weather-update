@@ -644,7 +644,7 @@
             let openMeteoData = null;
             let responseData = null;
 
-            // Step 1: Query Open-Meteo free API for live Ermita coordinates (14.5818, 120.9770)
+            // Step 1: Query Open-Meteo free API (no key required, completely public)
             try {
                 const meteoUrl = `https://api.open-meteo.com/v1/forecast?latitude=14.5818&longitude=120.9770&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code&hourly=precipitation_probability&timezone=Asia%2FManila&forecast_days=1`;
                 const meteoRes = await fetch(meteoUrl);
@@ -655,11 +655,13 @@
                 console.debug("Open-Meteo Connection Error:", err);
             }
 
-            // Step 2: Query Gemini API with Google Search Grounding for live weather system context and geological activity
-            const apiKey = ""; // Supplied at runtime
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+            // Step 2: Query Gemini API ONLY if an API Key exists. Otherwise bypass to avoid browser hangs.
+            const apiKey = ""; // Supplied at runtime in Canvas
+            
+            if (apiKey && apiKey.trim() !== "") {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
-            const systemPrompt = `You are a real-time meteorological and geological data parsing assistant.
+                const systemPrompt = `You are a real-time meteorological and geological data parsing assistant.
 Your goal is to search the web using Google Search and retrieve the absolute latest actual weather system name and Taal Volcano Alert status details for Manila, Philippines as of June 10, 2026.
 
 You must respond in strict JSON format matching the following schema:
@@ -673,35 +675,38 @@ You must respond in strict JSON format matching the following schema:
 }
 Do not include any Markdown wrappers like \`\`\`json. Only return the raw JSON string.`;
 
-            const userQuery = `Search the web for the latest PAGASA weather advisories for Manila (Southwest Monsoon / Habagat activity) and PHIVOLCS volcanic updates for Taal Volcano as of June 2026. Extract the real-time details and return them in the specified JSON format. Ensure reference compliance to 'Philippine Weather and Geographical Events_24'.`;
+                const userQuery = `Search the web for the latest PAGASA weather advisories for Manila (Southwest Monsoon / Habagat activity) and PHIVOLCS volcanic updates for Taal Volcano as of June 2026. Extract the real-time details and return them in the specified JSON format. Ensure reference compliance to 'Philippine Weather and Geographical Events_19'.`;
 
-            const payload = {
-                contents: [{ parts: [{ text: userQuery }] }],
-                tools: [{ "google_search": {} }],
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
-                generationConfig: {
-                    responseMimeType: "application/json"
-                }
-            };
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    const candidate = result.candidates?.[0];
-                    if (candidate && candidate.content?.parts?.[0]?.text) {
-                        responseData = JSON.parse(candidate.content.parts[0].text);
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    tools: [{ "google_search": {} }],
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                    generationConfig: {
+                        responseMimeType: "application/json"
                     }
+                };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        const candidate = result.candidates?.[0];
+                        if (candidate && candidate.content?.parts?.[0]?.text) {
+                            responseData = JSON.parse(candidate.content.parts[0].text);
+                        }
+                    }
+                } catch (e) {
+                    console.debug("Grounding sync error", e);
                 }
-            } catch (e) {
-                console.debug("Grounding sync error", e);
+            } else {
+                console.log("No API Key detected (Standard GitHub Pages deploy). Bypassing Gemini RAG call and launching with live public sensor telemetry.");
             }
 
             toggleLoadingState(false);
@@ -738,10 +743,17 @@ Do not include any Markdown wrappers like \`\`\`json. Only return the raw JSON s
                 };
 
                 updateDashboard(combinedData);
-                status.innerText = "Synced fully with live sensor telemetry and DOST-PHIVOLCS RAG";
+                
+                if (apiKey && apiKey.trim() !== "") {
+                    status.innerText = "Synced fully with live sensor telemetry and DOST-PHIVOLCS RAG";
+                    liveText.innerText = "Real-Time Grounded Feed";
+                    liveDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-ping";
+                } else {
+                    status.innerText = "Synced with live meteorological sensors (Grounded fallbacks active)";
+                    liveText.innerText = "Live Sensor Feed";
+                    liveDot.className = "w-2 h-2 rounded-full bg-emerald-400";
+                }
                 status.className = "text-xs text-indigo-300 font-medium";
-                liveDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-ping";
-                liveText.innerText = "Real-Time Grounded Feed";
             } else {
                 status.innerText = "Sync failed; applying localized RAG oscillations";
                 status.className = "text-xs text-red-400 font-medium";
@@ -973,7 +985,7 @@ Do not include any Markdown wrappers like \`\`\`json. Only return the raw JSON s
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
             const systemPrompt = `You are a world-class corporate risk operations assistant at our Manila office.
-You must refer to the tracking databases "Philippine Weather and Geographical Events_24" and "Gemini Gems_24" verbatim in your generated outputs.
+You must refer to the tracking databases "Philippine Weather and Geographical Events_19" and "Gemini Gems_19" verbatim in your generated outputs.
 Draft highly tactical, professional, and detailed operational briefs. Do not include loose pleasantries. Prioritize precision and alignment with corporate compliance targets.`;
 
             const contextualQuery = `Active context data for Wednesday, June 10, 2026:
@@ -1014,7 +1026,7 @@ User Query Instruction: ${customPrompt}`;
             } catch (err) {
                 console.debug("AI Copilot Error:", err);
                 resultText.innerText = `Could not connect to live AI Studio.
-Verbatim Context Verification: This bulletin aligns directly with compliance parameters specified in Philippine Weather and Geographical Events_24 and Gemini Gems_24.
+Verbatim Context Verification: This bulletin aligns directly with compliance parameters specified in Philippine Weather and Geographical Events_19 and Gemini Gems_19.
 
 Current Ermita Office Action Plan:
 1. Since the Heat Index stands at ${currentHeatIndex}°C, employees are encouraged to perform administrative functions in chilled hubs.
@@ -1054,7 +1066,7 @@ Current Ermita Office Action Plan:
                     parts: [{ text: cleanSpeakPrompt }]
                 }],
                 generationConfig: {
-                    responseModalities: ["AUDIO"],
+                    responseModalalities: ["AUDIO"],
                     speechConfig: {
                         voiceConfig: {
                             prebuiltVoiceConfig: { voiceName: "Zephyr" }
